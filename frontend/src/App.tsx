@@ -1,0 +1,114 @@
+import React, { useState, useEffect } from 'react';
+import {LoadingScreen} from './components/LoadingScreen';
+import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+
+
+
+function AppContent() {
+  const [currentPage, setCurrentPage] = useState('dashboard')
+  const [showInitialLoading, setShowInitialLoading] = useState(true)
+  const { user, isLoading } = useAuth()
+
+  // Handle initial loading screen
+  const handleLoadingComplete = () => {
+    setShowInitialLoading(false)
+  }
+
+  // Show initial loading screen only on first visit
+  if (showInitialLoading) {
+    return <LoadingScreen onComplete={handleLoadingComplete} />
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading NexaBoard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPage />
+  }
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />
+      case 'projects':
+        return (
+          <ProtectedRoute requiredRole="member">
+            <Projects />
+          </ProtectedRoute>
+        )
+      case 'kanban':
+        return (
+          <ProtectedRoute requiredRole="member">
+            <Kanban />
+          </ProtectedRoute>
+        )
+      case 'members':
+        return (
+          <ProtectedRoute requiredRole="manager">
+            <Members />
+          </ProtectedRoute>
+        )
+      case 'communication':
+        return (
+          <ProtectedRoute requiredRole="member">
+            <Communication />
+          </ProtectedRoute>
+        )
+      case 'gamification':
+        return (
+          <ProtectedRoute requiredRole="member">
+            <Gamification />
+          </ProtectedRoute>
+        )
+      case 'time-tracking':
+        return (
+          <ProtectedRoute requiredRole="member">
+            <TimeTracking />
+          </ProtectedRoute>
+        )
+      case 'ai-reports':
+        return (
+          <ProtectedRoute requiredRole="manager">
+            <AIReports />
+          </ProtectedRoute>
+        )
+      case 'settings':
+        return <Settings />
+      default:
+        return <Dashboard />
+    }
+  }
+
+  return (
+    <div className="h-screen flex bg-background">
+      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+      
+      <div className="flex-1 flex flex-col">
+        <Navbar />
+        
+        <main className="flex-1 overflow-auto p-6">
+          {renderPage()}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
+  )
+}
