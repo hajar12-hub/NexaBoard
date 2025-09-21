@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {LoadingScreen} from './components/LoadingScreen';
-import { Navbar } from './components/Navbar';
-import { Sidebar } from './components/Sidebar';
-
-
+import React, { useState, useEffect } from 'react'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { LoadingScreen } from './components/LoadingScreen'
+import { AuthPage } from './components/auth/AuthPage'
+import { Sidebar } from './components/Sidebar'
+import { Navbar } from './components/Navbar'
+import { Dashboard } from './components/pages/Dashboard'
+import { Projects } from './components/pages/Projects'
+import { Kanban } from './components/pages/Kanban'
+import { Members } from './components/pages/Members'
+import { Communication } from './components/pages/Communication'
+import { Gamification } from './components/pages/Gamification'
+import { TimeTracking } from './components/pages/TimeTracking'
+import { AIReports } from './components/pages/AIReports'
+import { Settings } from './components/pages/Settings'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard')
