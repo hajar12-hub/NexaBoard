@@ -15,6 +15,7 @@ import { TimeTracking } from './components/pages/TimeTracking'
 import { AIReports } from './components/pages/AIReports'
 import { Settings } from './components/pages/Settings'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import './globals.css';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard')

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Layers3 } from 'lucide-react'
 
 interface LoadingScreenProps {
@@ -72,8 +72,13 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Dark Background - Same as login page */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-primary/80">
-        <div className="absolute inset-0 bg-grid-white/5 bg-grid-16" />
+           <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1c] via-[#0f1a2d] to-[#1b2a40]">
+      {/* Overlay pour renforcer le luxe */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#000]/30 to-transparent" />
+
+      {/* Grid dorée discrète */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffd7000a_1px,transparent_1px),linear-gradient(to_bottom,#ffd7000a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+
         
         {/* Animated gradient overlay */}
         <motion.div
@@ -259,37 +264,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           </div>
 
           {/* Skeleton loading bars */}
-          <AnimatePresence>
-            {showSkeleton && (
-              <motion.div
-                className="space-y-3 mt-8"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                {[0, 1, 2].map((index) => (
-                  <motion.div
-                    key={index}
-                    className="h-2 bg-gradient-to-r from-white/20 via-white/30 to-white/20 rounded-full overflow-hidden"
-                    style={{ width: `${100 - index * 15}%`, margin: '0 auto' }}
-                  >
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent"
-                      style={{ width: '50%' }}
-                      animate={{ x: ['-100%', '200%'] }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: index * 0.2
-                      }}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+
         </div>
       </div>
     </div>

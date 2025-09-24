@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variables CSS personnalisées */
+@layer base {
+  :root {
+    --font-size: 16px;
+    --background: #ffffff;
+    --foreground: #262626; /* approximation oklch(0.145 0 0) */
+    --card: #ffffff;
+    --card-foreground: #262626;
+    --popover: #ffffff; /* oklch(1 0 0) */
+    --popover-foreground: #262626;
+    --primary: #030213;
+    --primary-foreground: #ffffff; /* oklch(1 0 0) */
+    --secondary: #f5f5f7; /* approximation oklch(0.95 0.0058 264.53) */
+    --secondary-foreground: #030213;
+    --muted: #ececf0;
+    --muted-foreground: #717182;
+    --accent: #e9ebef;
+    --accent-foreground: #030213;
+    --destructive: #d4183d;
+    --destructive-foreground: #ffffff;
+    --border: rgba(0, 0, 0, 0.1);
+    --input: transparent;
+    --input-background: #f3f3f5;
+    --switch-background: #cbced4;
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+    --ring: #b3b3b3; /* approximation oklch(0.708 0 0) */
+    --chart-1: #b38e4b; /* approximation oklch(0.646 0.222 41.116) */
+    --chart-2: #407fbf; /* approximation oklch(0.6 0.118 184.704) */
+    --chart-3: #39488e; /* approximation oklch(0.398 0.07 227.392) */
+    --chart-4: #dacc40; /* approximation oklch(0.828 0.189 84.429) */
+    --chart-5: #d0b63a; /* approximation oklch(0.769 0.188 70.08) */
+    --radius: 0.625rem;
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --sidebar: #fbfbfb; /* approximation oklch(0.985 0 0) */
+    --sidebar-foreground: #262626;
+    --sidebar-primary: #030213;
+    --sidebar-primary-foreground: #fbfbfb;
+    --sidebar-accent: #f8f8f8;
+    --sidebar-accent-foreground: #343434;
+    --sidebar-border: #eaeaea;
+    --sidebar-ring: #b3b3b3;
+
+    /* Typographie */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+    --text-5xl: 3rem;
+  }
+
+  /* Mode sombre */
+  .dark {
+    --background: #262626;
+    --foreground: #fbfbfb;
+    --card: #262626;
+    --card-foreground: #fbfbfb;
+    --popover: #262626;
+    --popover-foreground: #fbfbfb;
+    --primary: #fbfbfb;
+    --primary-foreground: #262626;
+    --secondary: #445566; /* approximation oklch(0.269 0 0) */
+    --secondary-foreground: #fbfbfb;
+    --muted: #445566;
+    --muted-foreground: #b3b3b3;
+    --accent: #445566;
+    --accent-foreground: #fbfbfb;
+    --destructive: #664444; /* approximation oklch(0.396 0 0) */
+    --destructive-foreground: #fbfbfb;
+    --border: #445566;
+    --input: #445566;
+    --ring: #707070;
+    --sidebar: #343434;
+    --sidebar-foreground: #fbfbfb;
+    --sidebar-primary: #fbfbfb;
+    --sidebar-primary-foreground: #262626;
+    --sidebar-accent: #445566;
+    --sidebar-accent-foreground: #fbfbfb;
+    --sidebar-border: #445566;
+    --sidebar-ring: #707070;
+  }
+
+  /* Styles de base */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-size: var(--font-size);
+  }
+
+  /* Typographie de base */
+  h1:not([class*="text-"]) { font-size: var(--text-2xl); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  h2:not([class*="text-"]) { font-size: var(--text-xl); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  h3:not([class*="text-"]) { font-size: var(--text-lg); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  h4:not([class*="text-"]) { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  p:not([class*="text-"]) { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
+  label:not([class*="text-"]) { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  button:not([class*="text-"]) { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  input:not([class*="text-"]), textarea:not([class*="text-"]), select:not([class*="text-"]) {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* Composants personnalisés */
+@layer components {
+  .card {
+    @apply rounded-lg p-6;
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  .card-header { @apply -m-6 mb-4 p-6 pb-4; border-bottom: 1px solid var(--border); }
+  .card-title { @apply text-2xl font-semibold leading-none tracking-tight; }
+  .card-description { @apply text-sm; color: var(--muted-foreground); }
+  .card-content { @apply pt-0; }
+  .card-footer { @apply -m-6 mt-6 p-6 pt-4; border-top: 1px solid var(--border); }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    border-radius: var(--radius);
+  }
+
+  .btn-primary { background-color: var(--primary); color: var(--primary-foreground); @apply hover:opacity-90; }
+  .btn-secondary { background-color: var(--secondary); color: var(--secondary-foreground); @apply hover:opacity-80; }
+  .btn-destructive { background-color: var(--destructive); color: var(--destructive-foreground); @apply hover:opacity-90; }
+  .btn-outline { @apply border; border-color: var(--border); background-color: transparent; @apply hover:bg-accent hover:text-accent-foreground; }
+  .btn-ghost { @apply hover:bg-accent hover:text-accent-foreground; }
+  .btn-sm { @apply h-9 px-3; }
+  .btn-md { @apply h-10 px-4 py-2; }
+  .btn-lg { @apply h-11 px-8; }
+
+  .input, .textarea, .select {
+    border: 1px solid var(--border);
+    background-color: var(--input-background);
+    border-radius: var(--radius);
+  }
+}
+
+/* Tu peux continuer le reste du code components, utilities et media queries exactement de la même façon en remplaçant `@apply border-border` par `border: 1px solid var(--border);` et en gardant tes variables CSS. */
