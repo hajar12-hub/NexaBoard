@@ -8,7 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Plus, Mail, MoreVertical, UserPlus } from 'lucide-react'
-import { members } from '../../data/mockData'
+import mockData from "../../data/MockData.ts";
+
+
+
 
 export function Members() {
   const [memberList, setMemberList] = useState(members)
