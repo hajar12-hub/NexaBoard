@@ -1,17 +1,48 @@
-# Node modules
-node_modules/
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 
-# Build output
-dist/
+# Ignorer le fichier de configuration principal (Backend)
+src/main/resources/application.properties
 
-# Environment variables
+# Si tu utilises un fichier .env (Node ou Spring)
 .env
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Dossiers de build (ne jamais pusher)
+/target/
+/bin/
+.settings/
+.classpath
+.project
 
-# OS files
-.DS_Store
-Thumbs.db
+
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
