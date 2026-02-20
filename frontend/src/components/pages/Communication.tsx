@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -22,6 +22,9 @@ import {
   Reply
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { messagesApi, type Message as ApiMessage } from '../../services/messagesApi'
+import { projectsApi } from '../../services/projectsApi'
+import { usersApi } from '../../services/usersApi'
 
 interface Message {
   id: string
@@ -44,60 +47,6 @@ interface AIInsight {
   participants: string[]
   projectsDiscussed: string[]
 }
-
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    senderId: '1',
-    senderName: 'Alex Johnson',
-    senderRole: 'admin',
-    content: 'Great progress on the mobile app project! The design review is scheduled for Friday.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    projectId: '1',
-    projectName: 'Mobile App Redesign',
-    type: 'announcement'
-  },
-  {
-    id: '2',
-    senderId: '2',
-    senderName: 'Sarah Wilson',
-    senderRole: 'manager',
-    content: 'I approve the budget allocation for Q4. Moving forward with the proposal.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    projectId: '2',
-    projectName: 'Budget Planning',
-    type: 'decision'
-  },
-  {
-    id: '3',
-    senderId: '3',
-    senderName: 'Mike Chen',
-    senderRole: 'member',
-    content: 'The API integration is complete. All tests are passing successfully.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45),
-    projectId: '1',
-    projectName: 'Mobile App Redesign',
-    type: 'message'
-  },
-  {
-    id: '4',
-    senderId: '4',
-    senderName: 'Emma Davis',
-    senderRole: 'member',
-    content: 'Can we schedule a quick sync for the design system updates?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    type: 'message'
-  },
-  {
-    id: '5',
-    senderId: '1',
-    senderName: 'Alex Johnson',
-    senderRole: 'admin',
-    content: 'Team meeting moved to 3 PM today. Please update your calendars.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 90),
-    type: 'announcement'
-  }
-]
 
 const mockAIInsights: AIInsight[] = [
   {
@@ -131,7 +80,42 @@ export function Communication() {
   const [newMessage, setNewMessage] = useState('')
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string; taskCount?: number }[]>([])
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const { user } = useAuth()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [msgs, projs, usrs] = await Promise.all([
+          messagesApi.getAllMessages(),
+          projectsApi.getAllProjects(),
+          usersApi.getAllUsers(),
+        ])
+        setMessages(msgs.map((m: ApiMessage) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderRole: m.senderRole,
+          content: m.content,
+          timestamp: new Date(m.createdAt),
+          projectId: m.projectId,
+          projectName: m.projectName,
+          type: (m.type || 'message') as 'message' | 'decision' | 'announcement',
+        })))
+        setProjects(projs.map((p) => ({ id: p.id, name: p.name })))
+        setUsers(usrs.map((u) => ({ id: u.id, name: u.name })))
+      } catch (error) {
+        console.error('Error fetching communication data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const getMessageTypeColor = (type: string) => {
     switch (type) {
@@ -160,14 +144,28 @@ export function Communication() {
     return date.toLocaleDateString()
   }
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      // In a real app, this would send the message to the backend
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !user) return
+    try {
+      const sent = await messagesApi.createMessage({ content: newMessage.trim(), type: 'message' })
+      setMessages((prev) => [{
+        id: sent.id,
+        senderId: sent.senderId,
+        senderName: sent.senderName,
+        senderRole: sent.senderRole,
+        content: sent.content,
+        timestamp: new Date(sent.createdAt),
+        projectId: sent.projectId,
+        projectName: sent.projectName,
+        type: (sent.type || 'message') as 'message' | 'decision' | 'announcement',
+      }, ...prev])
       setNewMessage('')
+    } catch (error) {
+      console.error('Failed to send message:', error)
     }
   }
 
-  const filteredMessages = mockMessages.filter(message => {
+  const filteredMessages = messages.filter(message => {
     const matchesFilter = selectedFilter === 'all' || 
                          (selectedFilter === 'decisions' && message.type === 'decision') ||
                          (selectedFilter === 'announcements' && message.type === 'announcement') ||
@@ -180,6 +178,14 @@ export function Communication() {
     
     return matchesFilter && matchesSearch
   })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -234,7 +240,10 @@ export function Communication() {
                 <CardContent className="flex-1 flex flex-col">
                   <ScrollArea className="flex-1 pr-4">
                     <div className="space-y-4">
-                      {filteredMessages.map((message) => (
+                      {filteredMessages.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No messages yet. Start the conversation!</p>
+                      ) : (
+                      filteredMessages.map((message) => (
                         <div key={message.id} className="group">
                           <div className="flex items-start gap-3">
                             <Avatar className="w-8 h-8">
@@ -279,7 +288,8 @@ export function Communication() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ))
+                      )}
                     </div>
                   </ScrollArea>
                   
@@ -313,27 +323,21 @@ export function Communication() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-xs">AJ</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">Alex Johnson</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-xs">SW</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">Sarah Wilson</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-xs">MC</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">Mike Chen</span>
-                  </div>
+                  {users.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No users yet</p>
+                  ) : (
+                    users.map((u) => (
+                      <div key={u.id} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="text-xs">
+                            {u.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{u.name}</span>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
@@ -342,21 +346,19 @@ export function Communication() {
                   <CardTitle className="text-base">Active Projects</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="w-3 h-3" />
-                    <span>Mobile App Redesign</span>
-                    <Badge variant="outline" className="text-xs">8</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="w-3 h-3" />
-                    <span>Budget Planning</span>
-                    <Badge variant="outline" className="text-xs">3</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="w-3 h-3" />
-                    <span>Design System</span>
-                    <Badge variant="outline" className="text-xs">5</Badge>
-                  </div>
+                  {projects.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No projects yet</p>
+                  ) : (
+                    projects.map((p) => (
+                      <div key={p.id} className="flex items-center gap-2 text-sm">
+                        <Hash className="w-3 h-3" />
+                        <span>{p.name}</span>
+                        {p.taskCount != null && (
+                          <Badge variant="outline" className="text-xs">{p.taskCount}</Badge>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>

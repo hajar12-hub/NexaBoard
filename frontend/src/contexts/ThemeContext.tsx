@@ -6,6 +6,7 @@ interface ThemeContextType {
   theme: Theme
   setTheme: (theme: Theme) => void
   effectiveTheme: 'light' | 'dark' // The actual theme being applied
+  toggleTheme: () => void // Toggle between light and dark (for AuthPage, etc.)
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -77,8 +78,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme, effectiveTheme])
 
+  const toggleTheme = () => {
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

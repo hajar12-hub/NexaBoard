@@ -1,12 +1,15 @@
-// frontend/src/api.js
-const apiUrl = import.meta.env.VITE_API_URL;
+// src/api/api.js
+import axios from "axios";
 
-export const fetchData = async () => {
-  try {
-    const res = await fetch(`${apiUrl}/api/data`);
-    return await res.json();
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-};
+const API = axios.create({
+  baseURL: "http://127.0.0.1:5000", // ton backend
+});
+
+// --- CRUD Projets ---
+export const getProjects = () => API.get("/projects");
+export const createProject = (project) => API.post("/projects", project);
+export const updateProject = (id, project) => API.put(`/projects/${id}`, project);
+export const deleteProject = (id) => API.delete(`/projects/${id}`);
+
+
+

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
+// --- TYPES ---
 export type UserRole = 'admin' | 'manager' | 'member'
 
 export interface User {
@@ -10,150 +11,130 @@ export interface User {
   avatar?: string
 }
 
+export interface AuthResult {
+  success: boolean
+  error?: string
+}
+
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<boolean>
-  register: (email: string, password: string, name: string, role?: UserRole) => Promise<boolean>
-  logout: () => void
+  login: (email: string, password: string) => Promise<AuthResult>
+  register: (email: string, password: string, name: string, role?: UserRole) => Promise<AuthResult>
+  logout: () => Promise<void>
   hasRole: (requiredRole: UserRole) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock users database
-const mockUsers: (User & { password: string })[] = [
-  {
-    id: '1',
-    email: 'admin@nexaboard.com',
-    password: 'admin123',
-    name: 'Admin User',
-    role: 'admin'
-  },
-  {
-    id: '2',
-    email: 'manager@nexaboard.com',
-    password: 'manager123',
-    name: 'Hajar Azaou',
-    role: 'manager'
-  },
-  {
-    id: '3',
-    email: 'member@nexaboard.com',
-    password: 'member123',
-    name: 'Hanan Azaou',
-    role: 'member'
-  }
-]
-
-// Mock JWT token generation
-const generateMockJWT = (user: User): string => {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({
-    sub: user.id,
-    email: user.email,
-    role: user.role,
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24h expiry
-  }))
-  const signature = btoa('mock-signature-' + user.id)
-  return `${header}.${payload}.${signature}`
-}
-
-// Mock JWT validation
-const validateMockJWT = (token: string): User | null => {
-  try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    
-    const payload = JSON.parse(atob(parts[1]))
-    const now = Math.floor(Date.now() / 1000)
-    
-    if (payload.exp < now) return null
-    
-    return {
-      id: payload.sub,
-      email: payload.email,
-      name: mockUsers.find(u => u.id === payload.sub)?.name || 'Unknown',
-      role: payload.role
-    }
-  } catch {
-    return null
-  }
-}
+// URL de ton backend Spring Boot
+const API_BASE_URL = 'http://localhost:8080/api/auth'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check for existing session on mount
+  // --- 1. VÉRIFICATION DE LA SESSION AU DÉMARRAGE ---
+  // Permet de rester connecté si on rafraîchit la page (F5)
   useEffect(() => {
-    const token = localStorage.getItem('nexaboard_token')
-    if (token) {
-      const userData = validateMockJWT(token)
-      setUser(userData)
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/me`, {
+          method: 'GET',
+          credentials: 'include', // Envoie le cookie au serveur
+        })
+        
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData)
+        } else {
+          setUser(null)
+        }
+      } catch (error) {
+        console.error("Session non trouvée ou serveur éteint")
+        setUser(null)
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+    checkAuth()
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  // --- 2. LOGIN ---
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true)
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password)
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser
-      const token = generateMockJWT(userWithoutPassword)
-      
-      localStorage.setItem('nexaboard_token', token)
-      setUser(userWithoutPassword)
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include', // Requis pour recevoir le cookie HttpOnly
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+        return { success: true }
+      }
+      const errorText = await response.text()
+      return { success: false, error: errorText || 'Invalid email or password' }
+    } catch (error) {
+      console.error("Erreur de connexion au serveur:", error)
+      return { success: false, error: 'Server unreachable. Please try again.' }
+    } finally {
       setIsLoading(false)
-      return true
     }
-    
-    setIsLoading(false)
-    return false
   }
 
-  const register = async (email: string, password: string, name: string, role: UserRole = 'member'): Promise<boolean> => {
+  // --- 3. REGISTER ---
+  const register = async (email: string, password: string, name: string, role: UserRole = 'member'): Promise<AuthResult> => {
     setIsLoading(true)
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Check if user already exists
-    if (mockUsers.find(u => u.email === email)) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name, role }),
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+        return { success: true }
+      }
+      const errorText = await response.text()
+      return { success: false, error: errorText || 'Registration failed' }
+    } catch (error) {
+      console.error("Erreur d'inscription:", error)
+      return { success: false, error: 'Server unreachable. Please try again.' }
+    } finally {
       setIsLoading(false)
-      return false
     }
-    
-    // Create new user
-    const newUser: User & { password: string } = {
-      id: String(mockUsers.length + 1),
-      email,
-      password,
-      name,
-      role
-    }
-    
-    mockUsers.push(newUser)
-    
-    const { password: _, ...userWithoutPassword } = newUser
-    const token = generateMockJWT(userWithoutPassword)
-    
-    localStorage.setItem('nexaboard_token', token)
-    setUser(userWithoutPassword)
-    setIsLoading(false)
-    return true
   }
 
-  const logout = () => {
-    localStorage.removeItem('nexaboard_token')
-    setUser(null)
+  // --- 4. LOGOUT ---
+  const logout = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        mode: 'cors',
+      })
+      // Attendre que la réponse soit bien reçue (le cookie est supprimé par le serveur)
+      if (response.ok) {
+        // Petit délai pour que le navigateur traite le Set-Cookie de suppression
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    } catch (error) {
+      console.error("Erreur lors du logout backend:", error)
+    } finally {
+      setUser(null)
+      // Rechargement complet pour vider tout l'état et forcer la page de login
+      window.location.href = '/'
+    }
   }
 
+  // --- 5. GESTION DES RÔLES ---
   const hasRole = (requiredRole: UserRole): boolean => {
     if (!user) return false
     

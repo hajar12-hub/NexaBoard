@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -15,12 +15,34 @@ import { TimeTracking } from './components/pages/TimeTracking'
 import { AIReports } from './components/pages/AIReports'
 import { Settings } from './components/pages/Settings'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import './globals.css';
+import { statsApi } from './services/statsApi'
+import './globals.css'
+
+interface SidebarCounts {
+  projects: number
+  members: number
+  messages: number
+}
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [showInitialLoading, setShowInitialLoading] = useState(true)
+  const [sidebarCounts, setSidebarCounts] = useState<SidebarCounts | null>(null)
   const { user, isLoading } = useAuth()
+
+  const fetchSidebarCounts = useCallback(async () => {
+    if (!user) return
+    try {
+      const stats = await statsApi.getStats()
+      setSidebarCounts({ projects: stats.projects, members: stats.members, messages: stats.messages })
+    } catch {
+      setSidebarCounts({ projects: 0, members: 0, messages: 0 })
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user) fetchSidebarCounts()
+  }, [user, fetchSidebarCounts])
 
   // Handle initial loading screen
   const handleLoadingComplete = () => {
@@ -55,6 +77,7 @@ function AppContent() {
         return (
           <ProtectedRoute requiredRole="member">
             <Projects />
+   
           </ProtectedRoute>
         )
       case 'kanban':
@@ -102,7 +125,7 @@ function AppContent() {
 
   return (
     <div className="h-screen flex bg-background">
-      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} counts={sidebarCounts} />
       
       <div className="flex-1 flex flex-col">
         <Navbar />

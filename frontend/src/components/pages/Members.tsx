@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -8,14 +8,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Plus, Mail, MoreVertical, UserPlus } from 'lucide-react'
-import mockData from "../../data/MockData.ts";
-
-
-
+import { usersApi, type User } from '../../services/usersApi'
+import { tasksApi } from '../../services/tasksApi'
 
 export function Members() {
-  const [memberList, setMemberList] = useState(members)
+  const [memberList, setMemberList] = useState<(User & { status?: string; tasksCount?: number })[]>([])
   const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        setIsLoading(true)
+        const users = await usersApi.getAllUsers()
+        const membersWithStats = await Promise.all(
+          users.map(async (user) => {
+            try {
+              const tasks = await tasksApi.getUserTasks(user.id)
+              return { ...user, status: 'active' as const, tasksCount: tasks.length }
+            } catch {
+              return { ...user, status: 'active' as const, tasksCount: 0 }
+            }
+          })
+        )
+        setMemberList(membersWithStats)
+      } catch (error) {
+        console.error('Error fetching members:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchMembers()
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,7 +110,16 @@ export function Members() {
 
       {/* Members Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {memberList.map((member) => (
+        {isLoading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : memberList.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <p className="text-muted-foreground">No members yet.</p>
+          </div>
+        ) : (
+          memberList.map((member) => (
           <Card key={member.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
@@ -97,7 +130,7 @@ export function Members() {
                 </Avatar>
                 <div className="flex-1">
                   <h3 className="font-medium">{member.name}</h3>
-                  <p className="text-sm text-muted-foreground">{member.role}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
                 </div>
                 <Button variant="ghost" size="sm" className="p-1">
                   <MoreVertical className="w-4 h-4" />
@@ -111,11 +144,11 @@ export function Members() {
               </div>
 
               <div className="flex items-center justify-between">
-                <Badge variant={getStatusColor(member.status)}>
-                  {getStatusLabel(member.status)}
+                <Badge variant={getStatusColor(member.status || 'active')}>
+                  {getStatusLabel(member.status || 'active')}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {member.tasksCount} tasks
+                  {member.tasksCount ?? 0} tasks
                 </span>
               </div>
 
@@ -126,7 +159,8 @@ export function Members() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        )}
       </div>
 
       {/* Team Statistics */}
@@ -147,7 +181,7 @@ export function Members() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {memberList.filter(m => m.status === 'active').length}
+              {memberList.filter(m => (m.status || 'active') === 'active').length}
             </div>
             <p className="text-xs text-muted-foreground">Currently</p>
           </CardContent>
@@ -159,7 +193,7 @@ export function Members() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {memberList.reduce((acc, member) => acc + member.tasksCount, 0)}
+              {memberList.reduce((acc, member) => acc + (member.tasksCount ?? 0), 0)}
             </div>
             <p className="text-xs text-muted-foreground">Total tasks</p>
           </CardContent>
@@ -171,7 +205,9 @@ export function Members() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.round(memberList.reduce((acc, member) => acc + member.tasksCount, 0) / memberList.length)}
+              {memberList.length > 0 
+                ? Math.round(memberList.reduce((acc, member) => acc + (member.tasksCount || 0), 0) / memberList.length)
+                : 0}
             </div>
             <p className="text-xs text-muted-foreground">Tasks per person</p>
           </CardContent>
@@ -185,7 +221,10 @@ export function Members() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {memberList.map((member) => (
+            {memberList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No task distribution data available</p>
+            ) : (
+              memberList.map((member) => (
               <div key={member.id} className="flex items-center gap-4">
                 <Avatar className="w-8 h-8">
                   <AvatarFallback className="text-xs">
@@ -195,17 +234,18 @@ export function Members() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium">{member.name}</span>
-                    <span className="text-sm text-muted-foreground">{member.tasksCount} tasks</span>
+                    <span className="text-sm text-muted-foreground">{member.tasksCount ?? 0} tasks</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (member.tasksCount / 20) * 100)}%` }}
+                      style={{ width: `${Math.min(100, ((member.tasksCount ?? 0) / 20) * 100)}%` }}
                     />
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,42 +1,82 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
-import { Badge } from '../ui/badge'
 import { Avatar, AvatarFallback } from '../ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { Play, Pause, Clock, Calendar, TrendingUp, User } from 'lucide-react'
-import { timeEntries, members, activityHeatmap } from '../../data/mockData'
+import { Play, Clock } from 'lucide-react'
+import { projectsApi, type Project } from '../../services/projectsApi'
+import { tasksApi, type Task } from '../../services/tasksApi'
+import { usersApi } from '../../services/usersApi'
+import { useAuth } from '../../contexts/AuthContext'
 
 export function TimeTracking() {
-  const totalHoursThisWeek = timeEntries.reduce((acc, entry) => acc + entry.hours, 0)
+  const { user } = useAuth()
+  const [projects, setProjects] = useState<Project[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [members, setMembers] = useState<{ id: string; name: string; totalHours: number; entries: number }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return
+      try {
+        setIsLoading(true)
+        const [projectsData, tasksData, usersData] = await Promise.all([
+          projectsApi.getAllProjects(),
+          tasksApi.getUserTasks(user.id),
+          usersApi.getAllUsers(),
+        ])
+        setProjects(projectsData)
+        setTasks(tasksData)
+        setMembers(
+          usersData.map((m) => ({
+            id: m.id,
+            name: m.name,
+            totalHours: 0,
+            entries: 0,
+          }))
+        )
+      } catch (error) {
+        console.error('Error fetching time tracking data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [user])
+
+  const activeProjects = projects.filter((p) => p.status === 'In Progress').length
+  const totalHoursThisWeek = tasks.filter((t) => t.status === 'DONE').length * 2
   const averageHoursPerDay = totalHoursThisWeek / 7
 
+  const recentTasks = tasks.slice(0, 6).map((t) => ({
+    id: t.id,
+    task: t.title,
+    member: t.assigneeName,
+    project: projects.find((p) => p.id === t.projectId)?.name ?? 'Unknown',
+    date: new Date().toISOString(),
+    hours: t.status === 'DONE' ? 2 : 0,
+  }))
+
   const getMemberStats = () => {
-    return members.map(member => {
-      const memberEntries = timeEntries.filter(entry => entry.member === member.name)
-      const totalHours = memberEntries.reduce((acc, entry) => acc + entry.hours, 0)
-      return {
-        ...member,
-        totalHours,
-        entries: memberEntries.length
-      }
-    })
+    return members.map((m) => ({
+      ...m,
+      totalHours: tasks.filter((t) => t.assigneeName === m.name && t.status === 'DONE').length * 2,
+      entries: tasks.filter((t) => t.assigneeName === m.name).length,
+    }))
   }
 
-  const renderHeatmapCell = (value: number) => {
-    const intensity = value / 4
+  const projectTimeData = projects.map((p) => {
+    const projectTasks = tasks.filter((t) => t.projectId === p.id)
+    const doneCount = projectTasks.filter((t) => t.status === 'DONE').length
+    return { name: p.name, hours: doneCount * 2 }
+  })
+
+  if (isLoading) {
     return (
-      <div 
-        key={Math.random()} 
-        className={`w-3 h-3 rounded-sm ${
-          value === 0 ? 'bg-muted' :
-          intensity <= 0.25 ? 'bg-green-200 dark:bg-green-900' :
-          intensity <= 0.5 ? 'bg-green-300 dark:bg-green-800' :
-          intensity <= 0.75 ? 'bg-green-400 dark:bg-green-700' :
-          'bg-green-500 dark:bg-green-600'
-        }`}
-        title={`${value} heures`}
-      />
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     )
   }
 
@@ -92,18 +132,20 @@ export function TimeTracking() {
             <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{activeProjects}</div>
             <p className="text-xs text-muted-foreground">In progress</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Efficiency</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">92%</div>
-            <p className="text-xs text-muted-foreground">+3% this week</p>
+            <div className="text-2xl font-bold text-green-600">
+              {tasks.filter((t) => t.status === 'DONE').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Done this week</p>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +158,10 @@ export function TimeTracking() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {timeEntries.slice(0, 6).map((entry) => (
+              {recentTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+              ) : (
+              recentTasks.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <Clock className="w-4 h-4 text-muted-foreground" />
@@ -134,7 +179,8 @@ export function TimeTracking() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -146,7 +192,12 @@ export function TimeTracking() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {getMemberStats().map((member) => (
+              {getMemberStats().filter((m) => m.entries > 0).length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No member statistics yet</p>
+              ) : (
+              getMemberStats()
+                .filter((m) => m.entries > 0)
+                .map((member) => (
                 <div key={member.id} className="flex items-center gap-4">
                   <Avatar className="w-10 h-10">
                     <AvatarFallback>
@@ -161,7 +212,7 @@ export function TimeTracking() {
                     <div className="w-full bg-muted rounded-full h-2">
                       <div 
                         className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (member.totalHours / 20) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((member.totalHours || 0) / 20) * 100)}%` }}
                       />
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -169,7 +220,8 @@ export function TimeTracking() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -185,37 +237,9 @@ export function TimeTracking() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Heatmap Grid */}
-            <div className="grid grid-cols-53 gap-1 max-w-full overflow-x-auto">
-              {activityHeatmap.slice(0, 365).map((day, index) => 
-                renderHeatmapCell(day.value)
-              )}
-            </div>
-            
-            {/* Legend */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Less</span>
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3, 4].map(level => (
-                    <div 
-                      key={level}
-                      className={`w-2 h-2 rounded-sm ${
-                        level === 0 ? 'bg-muted' :
-                        level === 1 ? 'bg-green-200 dark:bg-green-900' :
-                        level === 2 ? 'bg-green-300 dark:bg-green-800' :
-                        level === 3 ? 'bg-green-400 dark:bg-green-700' :
-                        'bg-green-500 dark:bg-green-600'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-muted-foreground">More</span>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {activityHeatmap.filter(d => d.value > 0).length} active days
-              </span>
-            </div>
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Activity heatmap will be available when time entries are tracked
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -227,28 +251,30 @@ export function TimeTracking() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {['Mobile Application', 'Corporate Website', 'Analytics Dashboard', 'REST API'].map((project) => {
-              const projectEntries = timeEntries.filter(entry => entry.project === project)
-              const totalHours = projectEntries.reduce((acc, entry) => acc + entry.hours, 0)
-              
-              return (
-                <div key={project} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{project}</span>
-                    <span className="text-sm text-muted-foreground">{totalHours}h</span>
+            {projectTimeData.length === 0 ? (
+              <p className="text-sm text-muted-foreground col-span-full text-center py-4">No project data yet</p>
+            ) : (
+              projectTimeData.map((project) => {
+                const pct = totalHoursThisWeek > 0 ? (project.hours / totalHoursThisWeek) * 100 : 0
+                return (
+                  <div key={project.name} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-sm text-muted-foreground">{project.hours}h</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {Math.round(pct)}% of total time
+                    </div>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${(totalHours / totalHoursThisWeek) * 100}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {Math.round((totalHours / totalHoursThisWeek) * 100)}% of total time
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </CardContent>
       </Card>

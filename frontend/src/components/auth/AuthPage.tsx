@@ -12,11 +12,23 @@ export function AuthPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
-        <div className="absolute inset-0 bg-grid-white/5 bg-grid-16" />
-        <div className="relative z-10 flex flex-col justify-center px-12 text-primary-foreground">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur">
+  <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
+  {/* Gradient sombre */}
+  <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1c] via-[#0f1a2d] to-[#1b2a40]" />
+  
+  {/* Overlay luxueux */}
+  <div className="absolute inset-0 bg-gradient-to-t from-[#000]/30 to-transparent" />
+  
+  {/* Grid dorée discrète */}
+  <div className="absolute inset-0 
+      bg-[linear-gradient(to_right,#ffd7000a_1px,transparent_1px),
+          linear-gradient(to_bottom,#ffd7000a_1px,transparent_1px)] 
+      bg-[size:40px_40px] opacity-20" />
+  
+  {/* Contenu */}
+  <div className="relative z-10 flex flex-col justify-center px-12 text-primary-foreground">
+    <div className="flex items-center gap-3 mb-8">
+      <div className="p-3 bg-white/10 rounded-2xl backdrop-blur">
               <Layers3 className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-bold">NexaBoard</h1>

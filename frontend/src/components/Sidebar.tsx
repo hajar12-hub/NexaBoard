@@ -14,24 +14,32 @@ import {
   Layers3
 } from 'lucide-react'
 
+interface SidebarCounts {
+  projects: number
+  members: number
+  messages: number
+}
+
 interface SidebarProps {
   currentPage: string
   onPageChange: (page: string) => void
+  counts?: SidebarCounts | null
 }
 
-const menuItems = [
+const menuItems = (counts: SidebarCounts | null) => [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'projects', label: 'Projects', icon: FolderOpen, badge: '12' },
+  { id: 'projects', label: 'Projects', icon: FolderOpen, badge: counts ? String(counts.projects) : undefined },
   { id: 'kanban', label: 'Kanban', icon: Kanban },
-  { id: 'members', label: 'Members', icon: Users, badge: '8' },
-  { id: 'communication', label: 'Communication', icon: MessageSquare, badge: '3' },
+  { id: 'members', label: 'Members', icon: Users, badge: counts ? String(counts.members) : undefined },
+  { id: 'communication', label: 'Communication', icon: MessageSquare, badge: counts ? String(counts.messages) : undefined },
   { id: 'gamification', label: 'Gamification', icon: Trophy },
   { id: 'time-tracking', label: 'Time Tracking', icon: Clock },
   { id: 'ai-reports', label: 'AI Reports', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: Settings }
 ]
 
-export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+export function Sidebar({ currentPage, onPageChange, counts }: SidebarProps) {
+  const items = menuItems(counts ?? null)
   return (
     <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
@@ -45,7 +53,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       
       <nav className="flex-1 p-4">
         <div className="space-y-2">
-          {menuItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon
             const isActive = currentPage === item.id
             

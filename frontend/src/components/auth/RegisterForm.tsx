@@ -13,6 +13,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
+  // États pour le formulaire
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -21,30 +22,37 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
+
+  // Hooks
   const { register, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
+    // --- Validations Frontend ---
     if (!email || !password || !name) {
-      setError('Please fill in all fields')
+      setError('Veuillez remplir tous les champs')
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      setError('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('Les mots de passe ne correspondent pas')
       return
     }
 
-    const success = await register(email, password, name, role)
-    if (!success) {
-      setError('Email already exists')
+    // --- Appel au Backend ---
+    const result = await register(email, password, name, role)
+
+    if (result.success) {
+      // L'application affichera automatiquement le dashboard car user sera défini dans le contexte
+    } else {
+      setError(result.error || 'Registration failed. Please try again.')
     }
   }
 
@@ -56,6 +64,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Champ Full Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <div className="relative">
@@ -72,6 +81,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             </div>
           </div>
 
+          {/* Champ Email */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -88,6 +98,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             </div>
           </div>
 
+          {/* Champ Role */}
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
             <div className="relative">
@@ -105,6 +116,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             </div>
           </div>
 
+          {/* Champ Password */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
@@ -129,6 +141,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             </div>
           </div>
 
+          {/* Champ Confirm Password */}
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
             <div className="relative">
@@ -153,6 +166,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             </div>
           </div>
 
+          {/* Alertes d'erreurs */}
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

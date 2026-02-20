@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -21,6 +21,9 @@ import {
   Flame
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { tasksApi } from '../../services/tasksApi'
+import { projectsApi } from '../../services/projectsApi'
+import { usersApi } from '../../services/usersApi'
 
 interface Badge {
   id: string
@@ -60,145 +63,98 @@ interface UserStats {
   rank: number
 }
 
-const mockBadges: Badge[] = [
-  {
-    id: '1',
-    name: 'Task Master',
-    description: 'Complete 10 tasks on time',
-    icon: 'checkCircle',
-    color: 'bg-green-500',
-    rarity: 'common',
-    earnedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    progress: 10,
-    maxProgress: 10
-  },
-  {
-    id: '2',
-    name: 'Top Contributor',
-    description: 'Be the top contributor of the week',
-    icon: 'crown',
-    color: 'bg-yellow-500',
-    rarity: 'legendary',
-    earnedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    progress: 1,
-    maxProgress: 1
-  },
-  {
-    id: '3',
-    name: 'Speed Demon',
-    description: 'Complete 5 tasks in one day',
-    icon: 'zap',
-    color: 'bg-red-500',
-    rarity: 'rare',
-    progress: 3,
-    maxProgress: 5
-  },
-  {
-    id: '4',
-    name: 'Team Player',
-    description: 'Help 3 team members this week',
-    icon: 'users',
-    color: 'bg-green-500',
-    rarity: 'common',
-    progress: 2,
-    maxProgress: 3
-  },
-  {
-    id: '5',
-    name: 'Streak Warrior',
-    description: 'Maintain a 7-day active streak',
-    icon: 'flame',
-    color: 'bg-red-500',
-    rarity: 'epic',
-    earnedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    progress: 7,
-    maxProgress: 7
-  }
-]
-
-const mockUserStats: UserStats[] = [
-  {
-    id: '1',
-    name: 'Alex Johnson',
-    role: 'admin',
-    totalPoints: 2450,
-    level: 12,
-    currentXP: 250,
-    nextLevelXP: 300,
-    badges: mockBadges.filter(b => b.earnedAt),
-    achievements: [],
-    streak: 14,
-    tasksCompleted: 45,
-    projectsContributed: 8,
-    rank: 1
-  },
-  {
-    id: '2',
-    name: 'Sarah Wilson',
-    role: 'manager',
-    totalPoints: 2380,
-    level: 11,
-    currentXP: 180,
-    nextLevelXP: 200,
-    badges: mockBadges.filter(b => b.earnedAt).slice(0, 2),
-    achievements: [],
-    streak: 12,
-    tasksCompleted: 42,
-    projectsContributed: 6,
-    rank: 2
-  },
-  {
-    id: '3',
-    name: 'Mike Chen',
-    role: 'member',
-    totalPoints: 2100,
-    level: 10,
-    currentXP: 100,
-    nextLevelXP: 200,
-    badges: mockBadges.filter(b => b.earnedAt).slice(0, 1),
-    achievements: [],
-    streak: 8,
-    tasksCompleted: 38,
-    projectsContributed: 5,
-    rank: 3
-  },
-  {
-    id: '4',
-    name: 'Emma Davis',
-    role: 'member',
-    totalPoints: 1850,
-    level: 9,
-    currentXP: 50,
-    nextLevelXP: 200,
-    badges: mockBadges.filter(b => b.earnedAt).slice(1, 2),
-    achievements: [],
-    streak: 5,
-    tasksCompleted: 32,
-    projectsContributed: 4,
-    rank: 4
-  },
-  {
-    id: '5',
-    name: 'John Smith',
-    role: 'member',
-    totalPoints: 1620,
-    level: 8,
-    currentXP: 120,
-    nextLevelXP: 200,
-    badges: [],
-    achievements: [],
-    streak: 3,
-    tasksCompleted: 28,
-    projectsContributed: 3,
-    rank: 5
-  }
+const BADGE_DEFINITIONS: (Omit<Badge, 'earnedAt'> & { rule: (tasks: number) => boolean })[] = [
+  { id: '1', name: 'Task Master', description: 'Complete 10 tasks on time', icon: 'checkCircle', color: 'bg-green-500', rarity: 'common', progress: 0, maxProgress: 10, rule: (t) => t >= 10 },
+  { id: '2', name: 'Top Contributor', description: 'Be the top contributor of the week', icon: 'crown', color: 'bg-yellow-500', rarity: 'legendary', progress: 0, maxProgress: 1, rule: () => false },
+  { id: '3', name: 'Speed Demon', description: 'Complete 5 tasks in one day', icon: 'zap', color: 'bg-red-500', rarity: 'rare', progress: 0, maxProgress: 5, rule: () => false },
+  { id: '4', name: 'Team Player', description: 'Help 3 team members this week', icon: 'users', color: 'bg-green-500', rarity: 'common', progress: 0, maxProgress: 3, rule: () => false },
+  { id: '5', name: 'Streak Warrior', description: 'Maintain a 7-day active streak', icon: 'flame', color: 'bg-red-500', rarity: 'epic', progress: 0, maxProgress: 7, rule: () => false },
 ]
 
 export function Gamification() {
   const { user } = useAuth()
   const [selectedTab, setSelectedTab] = useState('overview')
-  
-  const currentUser = mockUserStats.find(u => u.name === user?.name) || mockUserStats[0]
+  const [userStats, setUserStats] = useState<UserStats[]>([])
+  const [allTasks, setAllTasks] = useState<{ userId: string; userName: string; done: number; total: number }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return
+      try {
+        setIsLoading(true)
+        const [users, projects, myTasks] = await Promise.all([
+          usersApi.getAllUsers(),
+          projectsApi.getAllProjects(),
+          tasksApi.getUserTasks(user.id),
+        ])
+        const userTaskCounts = await Promise.all(
+          users.map(async (u) => {
+            try {
+              const tasks = await tasksApi.getUserTasks(u.id)
+              const done = tasks.filter((t) => t.status === 'DONE').length
+              return { userId: u.id, userName: u.name, userRole: u.role, done, total: tasks.length }
+            } catch {
+              return { userId: u.id, userName: u.name, userRole: u.role, done: 0, total: 0 }
+            }
+          })
+        )
+        setAllTasks(userTaskCounts)
+
+        const myProjects = projects.filter((p) => p.managerId === user.id || true)
+        const pointsPerTask = 50
+        const xpPerLevel = 200
+
+        const stats: UserStats[] = userTaskCounts
+          .map((ut, idx) => {
+            const points = ut.done * pointsPerTask
+            const level = Math.floor(points / xpPerLevel) + 1
+            const currentXP = points % xpPerLevel
+            const badges = BADGE_DEFINITIONS.filter((b) => b.rule(ut.done)).map((b) => ({
+              ...b,
+              earnedAt: new Date(),
+              progress: b.maxProgress,
+            }))
+            return {
+              id: ut.userId,
+              name: ut.userName,
+              role: ut.userRole,
+              totalPoints: points,
+              level,
+              currentXP,
+              nextLevelXP: xpPerLevel,
+              badges,
+              achievements: [],
+              streak: Math.min(14, ut.done),
+              tasksCompleted: ut.done,
+              projectsContributed: myProjects.length,
+              rank: 0,
+            }
+          })
+          .sort((a, b) => b.totalPoints - a.totalPoints)
+          .map((s, i) => ({ ...s, rank: i + 1 }))
+
+        setUserStats(stats)
+      } catch (error) {
+        console.error('Error fetching gamification data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [user])
+
+  const currentUser = userStats.find((u) => u.id === user?.id || u.name === user?.name) || userStats[0]
+  const displayBadges = BADGE_DEFINITIONS.map((b) => {
+    const tasksDone = currentUser?.tasksCompleted ?? 0
+    const earned = b.rule ? b.rule(tasksDone) : false
+    return {
+      ...b,
+      progress: Math.min(tasksDone, b.maxProgress || 10),
+      maxProgress: b.maxProgress || 10,
+      earnedAt: earned ? new Date() : undefined,
+    }
+  })
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case 'common': return 'border-green-400 bg-green-50 dark:bg-green-900'
@@ -216,6 +172,14 @@ export function Gamification() {
       case 3: return <Medal className="w-5 h-5 text-yellow-600" />
       default: return <Trophy className="w-5 h-5 text-muted-foreground" />
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   const getIconComponent = (iconName: string) => {
@@ -261,21 +225,21 @@ export function Gamification() {
                     <div className="relative">
                       <Avatar className="w-16 h-16">
                         <AvatarFallback className="text-lg">
-                          {currentUser.name.split(' ').map(n => n[0]).join('')}
+                          {(currentUser?.name || user?.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                        {currentUser.level}
+                        {currentUser?.level ?? 1}
                       </div>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium">{currentUser.name}</h3>
-                      <p className="text-sm text-muted-foreground capitalize">{currentUser.role}</p>
+                      <h3 className="font-medium">{currentUser?.name ?? user?.name ?? 'You'}</h3>
+                      <p className="text-sm text-muted-foreground capitalize">{currentUser?.role ?? user?.role ?? 'member'}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-sm font-medium">{currentUser.totalPoints} points</span>
+                        <span className="text-sm font-medium">{currentUser?.totalPoints ?? 0} points</span>
                         <Badge className="flex items-center gap-1">
-                          {getRankIcon(currentUser.rank)}
-                          Rank #{currentUser.rank}
+                          {getRankIcon(currentUser?.rank ?? 0)}
+                          Rank #{currentUser?.rank ?? '-'}
                         </Badge>
                       </div>
                     </div>
@@ -283,12 +247,12 @@ export function Gamification() {
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Level {currentUser.level} Progress</span>
+                      <span className="text-sm font-medium">Level {currentUser?.level ?? 1} Progress</span>
                       <span className="text-sm text-muted-foreground">
-                        {currentUser.currentXP}/{currentUser.nextLevelXP} XP
+                        {currentUser?.currentXP ?? 0}/{currentUser?.nextLevelXP ?? 200} XP
                       </span>
                     </div>
-                    <Progress value={(currentUser.currentXP / currentUser.nextLevelXP) * 100} />
+                    <Progress value={((currentUser?.currentXP ?? 0) / (currentUser?.nextLevelXP ?? 200)) * 100} />
                   </div>
 
                   <div className="grid grid-cols-3 gap-4 pt-4 border-t">
@@ -296,21 +260,21 @@ export function Gamification() {
                       <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full mx-auto mb-2">
                         <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
-                      <div className="font-medium text-sm">{currentUser.tasksCompleted}</div>
+                      <div className="font-medium text-sm">{currentUser?.tasksCompleted ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Tasks Done</div>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full mx-auto mb-2">
                         <Flame className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                       </div>
-                      <div className="font-medium text-sm">{currentUser.streak}</div>
+                      <div className="font-medium text-sm">{currentUser?.streak ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Day Streak</div>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full mx-auto mb-2">
                         <Users className="w-5 h-5 text-red-600 dark:text-red-400" />
                       </div>
-                      <div className="font-medium text-sm">{currentUser.projectsContributed}</div>
+                      <div className="font-medium text-sm">{currentUser?.projectsContributed ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Projects</div>
                     </div>
                   </div>
@@ -329,25 +293,31 @@ export function Gamification() {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">Sprint Goal</span>
-                        <span className="text-sm text-muted-foreground">75/100 tasks</span>
+                        <span className="text-sm text-muted-foreground">
+                          {userStats.reduce((a, u) => a + u.tasksCompleted, 0)}/{Math.max(100, userStats.reduce((a, u) => a + u.tasksCompleted, 0))} tasks
+                        </span>
                       </div>
-                      <Progress value={75} />
+                      <Progress value={Math.min(100, (userStats.reduce((a, u) => a + u.tasksCompleted, 0) / 100) * 100)} />
                     </div>
                     
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">Team Collaboration</span>
-                        <span className="text-sm text-muted-foreground">88%</span>
+                        <span className="text-sm text-muted-foreground">
+                          {userStats.length > 0 ? Math.round((userStats.filter((u) => u.tasksCompleted > 0).length / userStats.length) * 100) : 0}%
+                        </span>
                       </div>
-                      <Progress value={88} />
+                      <Progress value={userStats.length > 0 ? (userStats.filter((u) => u.tasksCompleted > 0).length / userStats.length) * 100 : 0} />
                     </div>
                     
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">Quality Score</span>
-                        <span className="text-sm text-muted-foreground">92%</span>
+                        <span className="text-sm text-muted-foreground">
+                          {userStats.reduce((a, u) => a + u.tasksCompleted, 0) > 0 ? '85%' : '0%'}
+                        </span>
                       </div>
-                      <Progress value={92} />
+                      <Progress value={userStats.reduce((a, u) => a + u.tasksCompleted, 0) > 0 ? 85 : 0} />
                     </div>
                   </div>
                 </CardContent>
@@ -365,7 +335,7 @@ export function Gamification() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {currentUser.badges.slice(0, 3).map((badge) => (
+                    {(currentUser?.badges || []).slice(0, 3).map((badge) => (
                       <div key={badge.id} className={`p-3 rounded-lg border-2 ${getRarityColor(badge.rarity)}`}>
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${badge.color}`}>
@@ -398,9 +368,11 @@ export function Gamification() {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm">Complete 15 tasks</span>
-                      <span className="text-sm text-muted-foreground">12/15</span>
+                      <span className="text-sm text-muted-foreground">
+                        {Math.min(currentUser?.tasksCompleted ?? 0, 15)}/15
+                      </span>
                     </div>
-                    <Progress value={80} />
+                    <Progress value={Math.min(100, ((currentUser?.tasksCompleted ?? 0) / 15) * 100)} />
                   </div>
                   
                   <div>
@@ -434,34 +406,34 @@ export function Gamification() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockUserStats.map((user, index) => (
-                  <div key={user.id} className={`flex items-center gap-4 p-4 rounded-lg border ${user.id === currentUser.id ? 'bg-primary/5 border-primary/20' : 'border-border'}`}>
+                {userStats.map((u) => (
+                  <div key={u.id} className={`flex items-center gap-4 p-4 rounded-lg border ${u.id === currentUser?.id ? 'bg-primary/5 border-primary/20' : 'border-border'}`}>
                     <div className="flex items-center justify-center w-8 h-8">
-                      {getRankIcon(user.rank)}
+                      {getRankIcon(u.rank)}
                     </div>
                     
                     <Avatar className="w-10 h-10">
                       <AvatarFallback>
-                        {user.name.split(' ').map(n => n[0]).join('')}
+                        {u.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{user.name}</h4>
-                        <Badge variant="outline" className="text-xs">{user.role}</Badge>
-                        {user.id === currentUser.id && <Badge className="text-xs">You</Badge>}
+                        <h4 className="font-medium">{u.name}</h4>
+                        <Badge variant="outline" className="text-xs">{u.role}</Badge>
+                        {u.id === currentUser?.id && <Badge className="text-xs">You</Badge>}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Level {user.level}</span>
-                        <span>{user.totalPoints} points</span>
-                        <span>{user.streak} day streak</span>
+                        <span>Level {u.level}</span>
+                        <span>{u.totalPoints} points</span>
+                        <span>{u.streak} day streak</span>
                       </div>
                     </div>
                     
                     <div className="text-right">
-                      <div className="font-medium">#{user.rank}</div>
-                      <div className="text-xs text-muted-foreground">{user.badges.length} badges</div>
+                      <div className="font-medium">#{u.rank}</div>
+                      <div className="text-xs text-muted-foreground">{u.badges.length} badges</div>
                     </div>
                   </div>
                 ))}
@@ -472,7 +444,7 @@ export function Gamification() {
 
         <TabsContent value="badges" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockBadges.map((badge) => (
+            {displayBadges.map((badge) => (
               <Card key={badge.id} className={`${getRarityColor(badge.rarity)} border-2`}>
                 <CardContent className="p-6">
                   <div className="text-center space-y-4">

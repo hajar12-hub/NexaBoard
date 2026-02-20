@@ -1,15 +1,59 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Progress } from '../ui/progress'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle } from 'lucide-react'
-import { projects, tasks, aiInsights } from '../../data/mockData'
+import { projectsApi, type Project } from '../../services/projectsApi'
+import { tasksApi, type Task } from '../../services/tasksApi'
+import { useAuth } from '../../contexts/AuthContext'
 
 export function Dashboard() {
-  const activeTasks = tasks.filter(task => task.status === 'in-progress' || task.status === 'todo')
-  const globalProgress = Math.round(projects.reduce((acc, project) => acc + project.progress, 0) / projects.length)
-  const totalTimeWorked = 42.5 // Mock data
+  const { user } = useAuth()
+  const [projects, setProjects] = useState<Project[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return
+      
+      try {
+        setIsLoading(true)
+        const [userProjects, userTasks] = await Promise.all([
+          projectsApi.getUserProjects(user.id),
+          tasksApi.getUserTasks(user.id)
+        ])
+        setProjects(userProjects)
+        setTasks(userTasks)
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user])
+
+  const activeTasks = tasks.filter(task => task.status === 'IN_PROGRESS' || task.status === 'TODO')
+  const globalProgress = projects.length > 0
+    ? Math.round(projects.reduce((acc, project) => acc + project.totalProgress, 0) / projects.length)
+    : 0
+  // Derived from tasks: completed tasks as proxy (real time tracking would need TimeEntry API)
+  const completedTasks = tasks.filter(t => t.status === 'DONE').length
+  const totalTimeWorked = completedTasks * 2 // Approx 2h per completed task
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -82,23 +126,27 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {projects.map((project) => (
-                <div key={project.id} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">{project.name}</span>
-                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-muted-foreground">{project.manager}</span>
-                      <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
-                        {project.status}
-                      </Badge>
+              {projects.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No projects yet</p>
+              ) : (
+                projects.map((project) => (
+                  <div key={project.id} className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium">{project.name}</span>
+                        <span className="text-sm text-muted-foreground">{project.totalProgress}%</span>
+                      </div>
+                      <Progress value={project.totalProgress} className="h-2" />
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">{project.managerName}</span>
+                        <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
+                          {project.status}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -110,71 +158,35 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {activeTasks.slice(0, 5).map((task) => (
-                <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{task.title}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {task.assignee} • {task.project}
+              {activeTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No active tasks</p>
+              ) : (
+                activeTasks.slice(0, 5).map((task) => {
+                  const priorityVariant = task.priority === 'HIGH' || task.priority === 'URGENT' 
+                    ? 'destructive' 
+                    : task.priority === 'MEDIUM' 
+                    ? 'default' 
+                    : 'secondary'
+                  return (
+                    <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{task.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {task.assigneeName}
+                        </div>
+                      </div>
+                      <Badge variant={priorityVariant}>
+                        {task.priority}
+                      </Badge>
                     </div>
-                  </div>
-                  <Badge 
-                    variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'}
-                  >
-                    {task.priority}
-                  </Badge>
-                </div>
-              ))}
+                  )
+                })
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* AI Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Automatic AI Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-medium mb-2">Productivity Score</h4>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-600">{aiInsights.productivity.score}</span>
-                <Badge variant="secondary" className="text-green-600">
-                  {aiInsights.productivity.trend}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {aiInsights.productivity.summary}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-medium mb-2">Identified Risks</h4>
-              <div className="space-y-2">
-                {aiInsights.risks.map((risk, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <AlertCircle className={`w-4 h-4 ${risk.severity === 'high' ? 'text-red-500' : 'text-yellow-500'}`} />
-                    <span className="text-sm">{risk.project}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-medium mb-2">Recommendations</h4>
-              <ul className="space-y-1">
-                {aiInsights.recommendations.slice(0, 3).map((rec, index) => (
-                  <li key={index} className="text-sm text-muted-foreground">
-                    • {rec}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
