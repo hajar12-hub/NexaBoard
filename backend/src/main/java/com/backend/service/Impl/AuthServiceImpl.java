@@ -32,7 +32,9 @@ public class AuthServiceImpl implements AuthService {
 
         // Convertir le rôle en format capitalisé pour correspondre à l'enum (member -> Member)
         String roleStr = request.getRole();
-        if (roleStr != null && !roleStr.isEmpty()) {
+        if (roleStr == null || roleStr.isEmpty()) {
+            roleStr = "member";
+        } else {
             roleStr = roleStr.substring(0, 1).toUpperCase() + roleStr.substring(1).toLowerCase();
         }
         

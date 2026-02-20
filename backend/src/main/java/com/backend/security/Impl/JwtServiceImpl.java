@@ -32,6 +32,9 @@ public class JwtServiceImpl implements JwtService {
     @Value("${application.security.jwt.cookie-name}")
     private String jwtCookieName;
 
+    @Value("${application.security.jwt.cookie-secure:false}")
+    private boolean cookieSecure;
+
     @Override
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -66,8 +69,8 @@ public class JwtServiceImpl implements JwtService {
                 .path("/")
                 .maxAge(24 * 60 * 60) // 24 heures
                 .httpOnly(true)       // Sécurité : Js ne peut pas lire le cookie HttpOnly
-                .secure(true)         // Requis pour HTTPS ou localhost sécurisé
-                .sameSite("Strict")   // Protection contre la faille CSRF
+                .secure(cookieSecure) // false pour localhost HTTP, true pour HTTPS en production
+                .sameSite("Lax")      // Lax permet l'envoi du cookie depuis localhost (Strict peut bloquer)
                 .build();
     }
 
@@ -85,7 +88,9 @@ public class JwtServiceImpl implements JwtService {
         return ResponseCookie.from(jwtCookieName, "")
                 .path("/")
                 .httpOnly(true)
-                .maxAge(0) // Supprime le cookie immédiatement
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .maxAge(0)
                 .build();
     }
 

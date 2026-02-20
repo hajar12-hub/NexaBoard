@@ -2,6 +2,7 @@ package com.backend.service.Impl;
 
 import com.backend.dto.ProjectRequest;
 import com.backend.dto.ProjectResponse;
+import com.backend.dto.ProjectUpdateRequest;
 import com.backend.model.Project;
 import com.backend.model.User;
 import com.backend.repository.ProjectRepository;
@@ -38,7 +39,27 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
 
         Project savedProject = projectRepository.save(project);
-        return mapToResponse(savedProject);}  //transformer l'objet projet en projectResponse
+        return mapToResponse(savedProject);
+    }
+
+    @Override
+    public ProjectResponse updateProject(String id, ProjectUpdateRequest request) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        if (request.getName() != null && !request.getName().isBlank()) {
+            project.setName(request.getName());
+        }
+        if (request.getDescription() != null) {
+            project.setDescription(request.getDescription());
+        }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            project.setStatus(request.getStatus());
+        }
+        if (request.getDeadline() != null) {
+            project.setDeadline(request.getDeadline());
+        }
+        return mapToResponse(projectRepository.save(project));
+    }
 
     @Override
     public List<ProjectResponse> getAllProjects() {

@@ -19,6 +19,18 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .role(user.getRole().name().toLowerCase())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<UserResponse> getManagersAndAdmins() {
         List<User> managers = userRepository.findByRole(UserRole.Manager);
         List<User> admins = userRepository.findByRole(UserRole.Admin);

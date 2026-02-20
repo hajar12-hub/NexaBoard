@@ -22,6 +22,11 @@ public class TaskController {
         return ResponseEntity.ok(taskService.createTask(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskResponse> update(@PathVariable String id, @RequestBody TaskRequest request) {
+        return ResponseEntity.ok(taskService.updateTask(id, request));
+    }
+
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<TaskResponse>> getByProject(@PathVariable String projectId) {
         return ResponseEntity.ok(taskService.getTasksByProject(projectId));

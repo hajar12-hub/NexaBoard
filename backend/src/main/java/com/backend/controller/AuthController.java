@@ -1,4 +1,4 @@
-package com.backend.service.Impl;
+package com.backend.controller;
 
 import com.backend.dto.auth.LoginRequest;
 import com.backend.dto.auth.RegisterRequest;
@@ -28,7 +28,7 @@ public class AuthController {
     private final UserRepository userRepository;
 
     /**
-     * Inscription d'un nouvel utilisateur
+     * Register a new user
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(
@@ -36,17 +36,17 @@ public class AuthController {
             HttpServletResponse response
     ) {
         try {
-            // 1. Appeler le service pour créer l'utilisateur et obtenir le token
+            // 1. Call the service to create the user and get the token
             String token = authService.register(request);
 
-            // 2. Récupérer l'utilisateur créé pour le renvoyer au frontend
+            // 2. Retrieve the created user to send back to the frontend
             User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
 
-            // 3. Créer et ajouter le cookie JWT à la réponse
+            // 3. Create and add the JWT cookie to the response
             ResponseCookie cookie = jwtService.generateJwtCookie(token);
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-            // 4. Convertir User en UserResponse (sans mot de passe, avec rôle en minuscules)
+            // 4. Convert User to UserResponse (without password, role in lowercase)
             UserResponse userResponse = toUserResponse(user);
             return ResponseEntity.ok(userResponse);
 
@@ -56,7 +56,7 @@ public class AuthController {
     }
 
     /**
-     * Connexion d'un utilisateur existant
+     * Login an existing user
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(
@@ -64,27 +64,28 @@ public class AuthController {
             HttpServletResponse response
     ) {
         try {
-            // 1. Authentifier et générer le token via le service
+            // 1. Authenticate and generate the token via the service
             String token = authService.login(request);
 
-            // 2. Récupérer l'utilisateur pour le frontend
+            // 2. Retrieve the user for the frontend
             User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
 
-            // 3. Créer et ajouter le cookie JWT
+            // 3. Create and add the JWT cookie
             ResponseCookie cookie = jwtService.generateJwtCookie(token);
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-            // 4. Convertir User en UserResponse (sans mot de passe, avec rôle en minuscules)
+            // 4. Convert User to UserResponse (without password, role in lowercase)
             UserResponse userResponse = toUserResponse(user);
             return ResponseEntity.ok(userResponse);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Email ou mot de passe incorrect");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect email or password");
         }
     }
 
     /**
-     * Récupérer les infos de l'utilisateur connecté (Utile au refresh F5 de React)
+     * Get information about the currently logged-in user
+     * (Useful for React page refresh)
      */
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
@@ -95,31 +96,31 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Le principal est l'objet User chargé par UserDetailsService
+        // The principal is the User object loaded by UserDetailsService
         User user = (User) authentication.getPrincipal();
         UserResponse userResponse = toUserResponse(user);
         return ResponseEntity.ok(userResponse);
     }
 
     /**
-     * Déconnexion (Suppression du cookie)
+     * Logout (Delete the cookie)
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         ResponseCookie cookie = jwtService.getCleanJwtCookie();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok("Déconnexion réussie");
+        return ResponseEntity.ok("Logout successful");
     }
 
     /**
-     * Convertit un User en UserResponse (sans mot de passe, rôle en minuscules)
+     * Converts a User to UserResponse (without password, role in lowercase)
      */
     private UserResponse toUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
-                .role(user.getRole().name().toLowerCase()) // Convertir en minuscules
+                .role(user.getRole().name().toLowerCase()) // convert role to lowercase
                 .build();
     }
 }

@@ -16,6 +16,11 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
 
+    @GetMapping
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
+    }
+
     @GetMapping("/managers")
     public ResponseEntity<List<UserResponse>> getAllManagers() {
         return ResponseEntity.ok(userService.getManagersAndAdmins());

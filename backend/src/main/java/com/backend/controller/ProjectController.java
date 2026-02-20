@@ -2,6 +2,7 @@ package com.backend.controller;
 
 import com.backend.dto.ProjectRequest;
 import com.backend.dto.ProjectResponse;
+import com.backend.dto.ProjectUpdateRequest;
 import com.backend.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,12 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('ROLE_manager', 'ROLE_admin')")
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request) {
         return ResponseEntity.ok(projectService.createProject(request));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_manager', 'ROLE_admin')")
+    public ResponseEntity<ProjectResponse> updateProject(@PathVariable String id, @RequestBody ProjectUpdateRequest request) {
+        return ResponseEntity.ok(projectService.updateProject(id, request));
     }
 
     @GetMapping
