@@ -37,16 +37,37 @@
 
 ### 1. Authentification
 *Connexion sécurisée avec gestion des rôles.*
-![Dashboard](frontend/src/components/images/6.png)
 ![Dashboard](frontend/src/components/images/7.png)
+![Dashboard](frontend/src/components/images/6.png)
 
 ### 2. Dashboard Principal
 *Statistiques réelles provenant de MongoDB.*
 ![Dashboard Screenshot](https://via.placeholder.com/600x300?text=Capture+Ecran+Dashboard)
 
-### 3. Tableau Kanban
+### 3. Gestion des Projets (CRUD)
+*Interface permettant aux Managers de créer, modifier et suivre l'échéance des projets critiques.*
+![alt text](frontend/src/components/images/1.png)
+
+### 4. Tableau Kanban
 *Gestion des tâches et assignations.*
-![Kanban Screenshot](https://via.placeholder.com/600x300?text=Capture+Ecran+Kanban)
+![Dashboard](frontend/src/components/images/2.png)
+
+### 5. Gestion des Membres & Équipes
+*Annuaire des utilisateurs permettant de visualiser les rôles et de répartir la charge de travail au sein des projets.*
+![alt text](frontend/src/components/images/3.png)
+
+### 6. Gamification & Engagement
+*Système de récompenses avec classement (Leaderboard) et badges pour stimuler la motivation et la complétion des tâches.*
+![alt text](frontend/src/components/images/5.png)
+
+### 6. Suivi du Temps (Time Tracking)
+*Outil de mesure de la productivité permettant de chronométrer le temps passé sur chaque tâche pour une analyse de rentabilité.*
+![alt text](frontend/src/components/images/4.png)
+
+### 7. Rapports Automatisés par IA
+*Génération de résumés stratégiques et d'analyses de performance via l'intégration de l'API OpenAI.*
+![alt text](frontend/src/components/images/9.png)
+
 
 ---
 
