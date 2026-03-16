@@ -4,7 +4,7 @@
 
 ---
 
-## 🌟 Fonctionnalités Clés
+##  Fonctionnalités Clés
 
 - **🔐 Authentification Sécurisée** : Système de Login/Register utilisant **JWT** stocké dans des **Cookies HttpOnly** (protection maximale contre XSS).
 - **📊 Dashboard Dynamique** : Vue d'ensemble des statistiques, progression globale et tâches actives en temps réel.
@@ -16,13 +16,11 @@
 
 ---
 
-## 🛠️ Stack Technique
+##  Stack Technique
 
 ### Frontend
 - **Framework** : React.js (Vite)
-- **Styling** : Tailwind CSS
-- **Composants** : Shadcn UI / Radix UI
-- **Icônes** : Lucide React
+- **Styling** : Tailwind CS
 
 ### Backend
 - **Framework** : Spring Boot 3.x
@@ -33,7 +31,7 @@
 
 ---
 
-## 📸 Aperçu du Projet
+##  Aperçu du Projet
 
 ### 1. Authentification
 *Connexion sécurisée avec gestion des rôles.*
@@ -71,7 +69,7 @@
 
 ---
 
-## ⚙️ Installation et Configuration
+##  Installation et Configuration
 
 ### 1. Configuration du Backend (Spring Boot)
 1. Allez dans le dossier `backend`.
